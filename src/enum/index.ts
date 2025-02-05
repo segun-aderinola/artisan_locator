@@ -34,3 +34,12 @@ export enum CustomerOnboardingStep {
   SET_PASSWORD = 5,
   FACIAL_VERIFICATION = 6,
 }
+
+export enum ServiceProviderOnboardingStep {
+  REGISTER_PHONE = 1,
+  VERIFY_PHONE = 2,
+  REGISTER_CUSTOMER_INFO = 3,
+  VERIFY_EMAIL = 4,
+  SET_PASSWORD = 5,
+  FACIAL_VERIFICATION = 6,
+}

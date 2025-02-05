@@ -7,11 +7,12 @@ import { inject, injectable } from "tsyringe";
 import { StatusCodes } from "http-status-codes";
 import { ApiResponse } from "../utils/api-response";
 import Utility from "../utils";
-import { TokenStatus, TokenType } from "../enum";
+import { ServiceProviderOnboardingStep, TokenStatus, TokenType, UserType } from "../enum";
 import TokenModel from "../models/token";
 import ServiceProviderModel from "../models/service-provider";
 import S3Service from "../service/s3-service";
 import TemporaryUserModel from "../models/temporary-user";
+import logger from "../utils/logger";
 
 @injectable()
 export class ServiceProviderController {
@@ -26,16 +27,18 @@ export class ServiceProviderController {
 
       const formattedPhoneNumber = Utility.formatPhoneNumber(phone);
 
-      const existingCustomer = await ServiceProviderModel.findOne({ where: { phone: formattedPhoneNumber } });
-      if (existingCustomer) {
-        return ApiResponse.handleError(res, "This Phone number has been used.", StatusCodes.BAD_REQUEST);
+      const existingServiceProvider = await ServiceProviderModel.findOne({ where: { phone: formattedPhoneNumber } });
+      if (existingServiceProvider) {
+        return ApiResponse.handleError(res, "Phone number is already registered.", StatusCodes.BAD_REQUEST);
       }
 
       const userId = uuidv4();
 
-      const newUser = await TemporaryUserModel.create({
-        phone: formattedPhoneNumber,
+      const tempUser = await TemporaryUserModel.create({
+        phone_number: formattedPhoneNumber,
         uuid: userId,
+        user_type: UserType.SERVICE_PROVIDER,
+        onboarding_step: ServiceProviderOnboardingStep.REGISTER_PHONE,
       });
 
       const existingToken = await TokenModel.findOne({
@@ -63,14 +66,18 @@ export class ServiceProviderController {
         code: verificationCode,
         type: TokenType.PHONE_VERIFICATION,
         status: TokenStatus.NOT_USED,
-        expired_at: moment().add(5, 'minutes').toDate(),
+        expired_at: moment().add(5, "minutes").toDate(),
       });
 
-      ApiResponse.handleSuccess(res, "Verification code sent successfully", { token }, StatusCodes.OK);
+      // delete user.password;
+      const safeUser: Partial<typeof tempUser> = tempUser;
+      delete safeUser.password;
 
+      return ApiResponse.handleSuccess(res, "Verification code sent successfully", { user: safeUser, token: token.code }, StatusCodes.CREATED);
     } catch (error) {
       console.error(error);
-      ApiResponse.handleError(res, (error as Error).message, StatusCodes.INTERNAL_SERVER_ERROR);
+      logger.log({ level: 'error', message: JSON.stringify(error) });
+      return ApiResponse.handleError(res, (error as Error).message, StatusCodes.INTERNAL_SERVER_ERROR);
     }
   };
 

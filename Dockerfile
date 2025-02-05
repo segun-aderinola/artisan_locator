@@ -1,13 +1,23 @@
-FROM node:16
+# Use official Node.js image as base
+FROM node:20
 
+# Set working directory in the container
 WORKDIR /app
 
+# Copy package.json and package-lock.json (or yarn.lock)
 COPY package*.json ./
 
-RUN npm install
+# Install dependencies
+RUN npm install --only=production
 
+# Copy the rest of the application files
 COPY . .
 
+# Build TypeScript code (if using TypeScript)
 RUN npm run build
 
+# Expose the port your app runs on
+EXPOSE 3000
+
+# Start the application
 CMD ["npm", "start"]
