@@ -1,0 +1,43 @@
+# Node.js dependencies
+node_modules/
+
+# Environment variables
+.env
+
+# macOS system files
+.DS_Store
+
+# Build output directories
+dist/
+build/
+
+# Log files
+*.log
+
+# Private keys and certificates
+*.pem
+
+# IDE and editor files
+.vscode/
+.idea/
+
+# Yarn and npm cache
+.yarn/
+.npm/
+
+# Test coverage reports
+coverage/
+
+# Operating system files
+Thumbs.db
+Desktop.ini
+.Trashes
+
+# Temporary files
+*.bak
+*.swp
+*.swo
+
+# Docker-related files
+.docker/
+docker-compose.override.yml

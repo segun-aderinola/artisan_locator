@@ -1,0 +1,59 @@
+# version: "3.8"
+# services:
+#   app:
+#     build: .
+#     ports:
+#       - "3000:3000"
+#     depends_on:
+#       - db
+#   db:
+#     image: postgres:latest
+#     environment:
+#       POSTGRES_USER: user
+#       POSTGRES_PASSWORD: password
+#       POSTGRES_DB: dongi
+
+version: '3.8'
+
+services:
+  postgresdb:
+    container_name: postgrescontainer
+    image: postgres:16.1
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    expose:
+      - 5432  # Exposes port to other containers in the same network, but not to the host machine
+    ports:
+      - 5432:5432  # Exposes port to the host machine, use this if connecting from the host (e.g., pgAdmin, local apps)
+    volumes:
+      - postgresvolume:/var/lib/postgresql/data
+    networks:
+      - app-network  # Optional: explicitly specify networks if you want to group services in specific networks
+
+  pgadmin:
+    container_name: pgadmincontainer
+    image: dpage/pgadmin4:latest
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD}
+      PGADMIN_LISTEN_PORT: 6000
+    expose:
+      - 6000  # Expose to other containers, not the host machine
+    ports:
+      - 7100:6000  # Exposes pgAdmin's port to the host
+    volumes:
+      - pgadminvolume:/var/lib/pgadmin
+    networks:
+      - app-network
+
+volumes:
+  postgresvolume:
+  pgadminvolume:
+
+networks:
+  app-network:  # Define a custom network if you want containers to communicate via Docker's internal network
+    driver: bridge
