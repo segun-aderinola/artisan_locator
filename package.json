@@ -11,7 +11,7 @@
     "lint": "eslint src/**/*.ts --fix",
     "prettier": "prettier --write .",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "prepare": "husky install"
+    "prepare": "husky"
   },
   "keywords": [],
   "author": "",
