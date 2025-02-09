@@ -3,7 +3,10 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "start": "nodemon --watch \"src/**\" --ext \"ts,json\" --exec \"ts-node src/server.ts\"",
+    "prestart": "npm run build",
+    "start": "node dist/server.js",
+    "dev": "nodemon --watch \"src/**\" --ext \"ts,json\" --exec \"ts-node src/server.ts\"",
+    "build": "rm -rf build && tsc",
     "lint:no-fix": "eslint src/**/*.ts",
     "lint": "eslint src/**/*.ts --fix",
     "prettier": "prettier --write .",

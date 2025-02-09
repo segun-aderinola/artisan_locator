@@ -142,11 +142,11 @@ export class CustomerController {
       );
   
       await t.commit();
-      ApiResponse.handleSuccess(res, "Phone number successfully verified!", {}, StatusCodes.OK);
+      return ApiResponse.handleSuccess(res, "Phone number successfully verified!", {}, StatusCodes.OK);
     } catch (error) {
       await t.rollback();
       console.error(error);
-      ApiResponse.handleError(res, (error as Error).message, StatusCodes.INTERNAL_SERVER_ERROR);
+      return ApiResponse.handleError(res, (error as Error).message, StatusCodes.INTERNAL_SERVER_ERROR);
     }
   };
 
@@ -680,6 +680,27 @@ export class CustomerController {
       await resetToken.update({ status: TokenStatus.USED });
 
       ApiResponse.handleSuccess(res, "Password successfully reset", {}, StatusCodes.OK);
+    } catch (error) {
+      console.error(error);
+      ApiResponse.handleError(res, (error as Error).message, StatusCodes.INTERNAL_SERVER_ERROR);
+    }
+  };
+
+  public getProfile = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { userId } = req.body;
+
+      const user = await CustomerModel.findOne({ where: { uuid: userId } });
+
+      if (!user) {
+        return ApiResponse.handleError(res, "User not found", StatusCodes.NOT_FOUND);
+      }
+
+      // delete user.password;
+      const safeUser: Partial<typeof user> = user;
+      delete safeUser.password;
+
+      ApiResponse.handleSuccess(res, "User profile retrieved", { user: safeUser }, StatusCodes.OK);
     } catch (error) {
       console.error(error);
       ApiResponse.handleError(res, (error as Error).message, StatusCodes.INTERNAL_SERVER_ERROR);

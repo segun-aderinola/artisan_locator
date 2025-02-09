@@ -12,8 +12,8 @@
         "ecmaVersion": 2020,
         "sourceType": "module",
         "ecmaFeatures": {
-            "jsx": true,
-        },
+            "jsx": true
+        }
     },
     "env": {
         "browser": true,
@@ -28,5 +28,5 @@
         "@typescript-eslint/explicit-function-return-type": "warn",
         "no-console": "warn",
         "no-unused-vars": "warn",
-    },
+    }
 }
