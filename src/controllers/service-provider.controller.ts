@@ -524,31 +524,58 @@ export class ServiceProviderController {
                 return ApiResponse.handleError(res, 'Service provider not found.', StatusCodes.NOT_FOUND);
             }
 
-            try {
-                if (req.files && Array.isArray(req.files)) {
-                    
-                    const uploadPromises = this.s3Service.uploadFile(req.files, user_id);
-                }
-
-                // await serviceProvider.update({
-                //   identification_type: means_of_verification,
-                //   identification_doc_url: verificationFileUrl!,
-                //   certificate_of_expertise_url: certificateFileUrl!,
-                // });
-                ApiResponse.handleSuccess(
+            // Check if files are provided
+            if (!req.files || !req.files.means_of_verification_file || !req.files.certificate_of_expertise_file) {
+                return ApiResponse.handleError(
                     res,
-                    'Verification documents uploaded successfully.',
-                    {},
-                    StatusCodes.CREATED
+                    'Both verification documents are required.',
+                    StatusCodes.BAD_REQUEST
+                );
+            }
+
+            // Extract files from req.files
+            const meansOfVerificationFile = req.files.means_of_verification_file[0];
+            const certificateOfExpertiseFile = req.files.certificate_of_expertise_file[0];
+
+            // Upload both files to S3 at the same time
+            let fileUrls: string[];
+            try {
+                fileUrls = await this.s3Service.uploadMultipleFiles(
+                    [meansOfVerificationFile, certificateOfExpertiseFile],
+                    user_id
                 );
             } catch (error) {
-                console.error('Error uploading files:', error);
-                ApiResponse.handleError(
+                console.error('Error uploading files to S3:', error);
+                return ApiResponse.handleError(
                     res,
-                    'An error occurred while uploading files.',
+                    'Failed to upload verification documents.',
                     StatusCodes.INTERNAL_SERVER_ERROR
                 );
             }
+
+            // Destructure the returned URLs
+            const [meansOfVerificationUrl, certificateOfExpertiseUrl] = fileUrls;
+            // Update the temporary service provider's verification documents
+            const updatedServiceProvider = await tempServiceProvider.update(
+                {
+                    identification_type: means_of_verification,
+                    identification_doc_url: meansOfVerificationUrl, // URL of the means of verification file
+                    certificate_of_expertise_url: certificateOfExpertiseUrl, // URL of the certificate of expertise file
+                    onboarding_step: ServiceProviderOnboardingStep.UPLOAD_VERIFICATION_DOCUMENTS, // Update onboarding step
+                },
+                { transaction }
+            );
+
+            // Commit the transaction
+            await transaction.commit();
+
+            // Return success response with the updated service provider information
+            ApiResponse.handleSuccess(
+                res,
+                'Verification documents uploaded successfully.',
+                { serviceProvider: updatedServiceProvider },
+                StatusCodes.CREATED
+            );
         } catch (error) {
             console.error('Error processing request:', error);
             ApiResponse.handleError(res, (error as Error).message, StatusCodes.INTERNAL_SERVER_ERROR);

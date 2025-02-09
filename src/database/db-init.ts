@@ -7,25 +7,20 @@ import Db from './index';
 
 // Database connection
 const DbInstance = async () => {
-  try {
-    await Db.authenticate();
-    console.log('Connection has been established successfully.');
-    
-    CustomerModel.sync({ alter: false });
-    ServiceProviderModel.sync({ alter: false });
-    TokenModel.sync({ alter: false });
-    AdminModel.sync({ alter: false });
-    TemporaryUserModel.sync({ alter: false });
-    // AccountModel.sync({alter:false});
-    // TransactionModel.sync({alter:false});
-    // PayeeModel.sync({alter:false})
-    // LoanModel.sync({alter:false,hooks:true})
-    // await sequelize.sync({ force: true });
+    try {
+        await Db.authenticate();
+        console.log('Connection has been established successfully.');
 
-  } catch (error) {
-    console.error('Unable to connect to the database:', error);
-    process.exit(1); // Exit the application if the DB connection fails
-  }
+        CustomerModel.sync({ alter: false });
+        ServiceProviderModel.sync({ alter: false });
+        TokenModel.sync({ alter: false });
+        AdminModel.sync({ alter: false });
+        TemporaryUserModel.sync({ alter: false });
+        // await sequelize.sync({ force: true });
+    } catch (error) {
+        console.error('Unable to connect to the database:', error);
+        process.exit(1); // Exit the application if the DB connection fails
+    }
 };
 
 export default DbInstance;
