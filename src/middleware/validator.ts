@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
-import { ApiResponse } from 'src/utils/api-response';
+import { ApiResponse } from '../utils/api-response';
 import { Schema, ValidationError } from 'yup';
 
 export const validator = (schema: Schema<any>) => {
