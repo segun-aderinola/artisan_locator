@@ -15,10 +15,19 @@ import TemporaryUserModel from '../models/temporary-user';
 import logger from '../utils/logger';
 import { Op, Transaction } from 'sequelize';
 import sequelize from '../database';
+import { RequestWithUser } from '../types/requestWithUser';
+import { RatingService } from '../service/rating.service';
+import { WalletService } from '../service/wallet.service';
+import { RequestService } from '../service/requests.service';
 
 @injectable()
 export class ServiceProviderController {
-    constructor(@inject(S3Service) private readonly s3Service: S3Service) {}
+    constructor(
+        @inject(S3Service) private readonly s3Service: S3Service,
+        @inject(RatingService) private readonly ratingService: RatingService,
+        @inject(WalletService) private readonly walletService: WalletService,
+        @inject(RequestService) private readonly requestService: RequestService,
+    ) {}
 
     public registerPhone = async (req: Request, res: Response): Promise<void> => {
         try {
@@ -652,8 +661,6 @@ export class ServiceProviderController {
     public login = async (req: Request, res: Response): Promise<void> => {
         try {
             const { email, password } = req.body;
-
-            // Find the service provider by email
             const serviceProvider = await ServiceProviderModel.findOne({
                 where: { email },
             });
@@ -662,7 +669,6 @@ export class ServiceProviderController {
                 return ApiResponse.handleError(res, 'Invalid login details.', StatusCodes.NOT_FOUND);
             }
 
-            // Verify the password
             const isPasswordValid = bcrypt.compareSync(password, serviceProvider.password);
 
             if (!isPasswordValid) {
@@ -670,15 +676,12 @@ export class ServiceProviderController {
             }
 
             if (serviceProvider.flagged) {
-                // if (serviceProvider.status === 'INACTIVE') {
                 return ApiResponse.handleError(
                     res,
                     'Your account is inactive. Please contact support.',
                     StatusCodes.UNAUTHORIZED
                 );
             }
-
-            // Generate a JWT token
             const token = JWT.sign(
                 {
                     userId: serviceProvider.uuid,
@@ -686,18 +689,19 @@ export class ServiceProviderController {
                     lastname: serviceProvider.lastname,
                     phone: serviceProvider.phone,
                     email: serviceProvider.email,
-                    role: UserType.SERVICE_PROVIDER, // Use a role specific to service providers
+                    role: UserType.SERVICE_PROVIDER,
                 },
                 process.env.JWT_SECRET_KEY as string,
-                { expiresIn: '1h' } // Token expires in 1 hour
+                { expiresIn: '1h' }
             );
 
-            // Remove sensitive data before sending the response
             const safeServiceProvider: Partial<typeof serviceProvider> = serviceProvider.toJSON();
             delete safeServiceProvider.password;
 
-            // Return success response with token and user data
-            ApiResponse.handleSuccess(res, 'Login successful', { token, user: safeServiceProvider }, StatusCodes.OK);
+            const rating = await this.ratingService.calculateRatings(serviceProvider.uuid)
+            const wallet = await this.walletService.findWalletByUser(serviceProvider.uuid)
+            const jobs_completed = await this.requestService.countCompletedRequestsByProvider(serviceProvider.uuid)
+            ApiResponse.handleSuccess(res, 'Login successful', { token, user: safeServiceProvider, rating, wallet, jobs_completed }, StatusCodes.OK);
         } catch (error) {
             console.error('Error during login:', error);
             ApiResponse.handleError(res, 'An error occurred during login.', StatusCodes.INTERNAL_SERVER_ERROR);
@@ -789,25 +793,50 @@ export class ServiceProviderController {
         }
     };
 
-    public getProfile = async (req: Request, res: Response): Promise<void> => {
+    public getProfile = async (req: RequestWithUser, res: Response): Promise<void> => {
         try {
-            const { userId } = req.params;
-
+            const userId = req.user?.userId;
+            if(!userId){
+                return ApiResponse.handleError(res, 'User not authorized', StatusCodes.UNAUTHORIZED);
+            }
             const serviceProvider = await ServiceProviderModel.findOne({ where: { uuid: userId } });
 
             if (!serviceProvider) {
+                return ApiResponse.handleError(res, 'User not found', StatusCodes.NOT_FOUND);
+            }
+            const safeServiceProvider: Partial<typeof serviceProvider> = serviceProvider;
+            delete safeServiceProvider.password;
+            
+            const rating = await this.ratingService.calculateRatings(userId)
+            const wallet = await this.walletService.findWalletByUser(userId)
+            const jobs_completed = await this.requestService.countCompletedRequestsByProvider(userId)
+            ApiResponse.handleSuccess(res, 'User found', { user: safeServiceProvider, rating, wallet, jobs_completed}, 200);
+        } catch (error) {
+            console.error(error);
+            ApiResponse.handleError(res, (error as Error).message, 500);
+        }
+    };
+
+    public changePassword = async (req: RequestWithUser, res: Response): Promise<void> => {
+        try {
+            const { old_password, new_password } = req.body;
+            const userId = req.user?.userId
+            const service_provider = await ServiceProviderModel.findOne({ where: { uuid: userId } });
+
+            if (!service_provider) {
                 return ApiResponse.handleError(res, 'User not found', 404);
             }
 
-            // TODO::REFACTOR THIS TO USE STATUS ENUM
-            if (serviceProvider.flagged) {
-                return ApiResponse.handleError(res, 'Your account is inactive. Please contact support.', 401);
+            const isPasswordValid = bcrypt.compareSync(old_password, service_provider.password);
+
+            if (!isPasswordValid) {
+                return ApiResponse.handleError(res, 'Old Password is incorrect', StatusCodes.BAD_REQUEST);
             }
+            const hashedPassword = bcrypt.hashSync(new_password, 10);
 
-            const safeServiceProvider: Partial<typeof serviceProvider> = serviceProvider;
-            delete safeServiceProvider.password;
+            await service_provider.update({ password: hashedPassword });
 
-            ApiResponse.handleSuccess(res, 'User found', { user: safeServiceProvider }, 200);
+            ApiResponse.handleSuccess(res, 'Password changed successfully', {}, 200);
         } catch (error) {
             console.error(error);
             ApiResponse.handleError(res, (error as Error).message, 500);

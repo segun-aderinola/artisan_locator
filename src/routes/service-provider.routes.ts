@@ -1,9 +1,10 @@
 import { Router, Request, Response } from 'express';
 import { container } from 'tsyringe';
 import AuthValidationSchema, { validate } from '../validators/auth-validator.schema';
-import { validator } from '../middleware/auth.middleware';
+import { UserAuthentication, validator } from '../middleware/auth.middleware';
 import { ServiceProviderController } from '../controllers/service-provider.controller';
 import upload, { customUpload } from '../middleware/upload.middleware';
+import { changePasswordSchema } from '../validators/change_password.validator.schema';
 
 const router = Router();
 
@@ -52,5 +53,9 @@ router.post('/forgot-password', serviceProviderController.forgotPassword);
 
 // Reset password with a valid token
 router.post('/reset-password', serviceProviderController.resetPassword);
+
+router.get('/dashboard/profile', UserAuthentication, serviceProviderController.getProfile);
+
+router.post('/dashboard/change-password', [UserAuthentication, validate(changePasswordSchema)], serviceProviderController.changePassword);
 
 export default router;

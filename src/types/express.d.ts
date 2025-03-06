@@ -1,11 +1,14 @@
-import { Request } from "express";
+import { UserType } from "../enum";
 
-declare module "express-serve-static-core" {
-  interface Request {
+declare namespace Express {
+  export interface Request {
     user?: {
-      id: string;
+      userId: string;
+      firstname: string;
+      lastname: string;
+      phone: string;
       email: string;
-      user_type: string;
+      role: UserType;
     };
   }
 }

@@ -19,6 +19,10 @@ export enum UserType {
   SERVICE_PROVIDER = "SERVICE_PROVIDER",
 }
 
+export enum ErrorCode {
+  GENERAL_ERROR = "general_error"
+}
+
 // User Gender
 export enum Gender {
   MALE = "MALE",

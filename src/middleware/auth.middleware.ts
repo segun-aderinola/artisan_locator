@@ -2,21 +2,10 @@ import { Schema } from 'yup';
 import { Request, Response, NextFunction } from 'express';
 import { ApiResponse } from '../utils/api-response'; // Assuming this is your custom ApiResponse
 import { StatusCodes } from 'http-status-codes';
-import JWT from "jsonwebtoken";
+import jwt from "jsonwebtoken";
 import { AuthenticatedRequest, UserPayload } from '../interfaces/general';
+import { getUser, RequestWithUser } from '../types/requestWithUser';
 
-// export const validator = <T>(schema: Schema<T>) => {
-//   return async (req: Request, res: Response, next: NextFunction) => {
-//     try {
-//       // Validate request body using the provided schema
-//       await schema.validate(req.body, { abortEarly: false });
-//       next(); // Continue to the next middleware or route handler
-//     } catch (error: any) {
-//       // If validation fails, send an error response
-//       return ApiResponse.handleError(res, error.errors[0], StatusCodes.BAD_REQUEST);
-//     }
-//   };
-// };
 
 export const validator = (schema: Schema<any>) => {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -29,9 +18,8 @@ export const validator = (schema: Schema<any>) => {
   };
 };
 
-export const authenticateUser = async (req: Request, res: Response, next: NextFunction) => {
+export const authenticateUser = async (req: any, res: Response, next: NextFunction) => {
   try {
-    // 1. Get the token from the authorization header
     let token;
     if (
       req.headers.authorization &&
@@ -40,32 +28,22 @@ export const authenticateUser = async (req: Request, res: Response, next: NextFu
       token = req.headers.authorization.split(' ')[1];
     }
 
-    // 2. Check if no token is provided
     if (!token) {
       return ApiResponse.handleError(res, "Authentication failed. Token is required.", StatusCodes.UNAUTHORIZED);
     }
 
-    // 3. Verify the token
     let decoded: UserPayload;
     try {
-      decoded = JWT.verify(token, process.env.JWT_SECRET_KEY as string) as UserPayload;
-      // Optionally, validate required fields in the payload
-      // if (!decoded.id || !decoded.email || !decoded.user_type) {
-      //   return ApiResponse.handleError(res, "Authentication failed. Invalid token payload.", StatusCodes.UNAUTHORIZED);
-      // }
+      console.log(process.env.JWT_SECRET_KEY)
+      decoded = jwt.verify(token, process.env.JWT_SECRET_KEY as string) as UserPayload;
+
     } catch (err) {
       return ApiResponse.handleError(res, "Authentication failed. Invalid or expired token.", StatusCodes.UNAUTHORIZED);
     }
 
-    // 4. Attach user information to the request object
-    req.user = {
-      id: decoded.uuid,
-      email: decoded.email,
-      user_type: decoded.user_type,
-    };
-    // req.user = decoded;
-
-    // Road clear! Proceed to the next middleware or route handler
+    const user = await getUser(req);
+    console.log(user)
+    req.user = user
     next();
   } catch (error) {
     console.error("Authentication error:", error);
@@ -91,3 +69,26 @@ export const authorizeUserType = (...allowedTypes: string[]) => {
   };
 };
 
+export const UserAuthentication = (req: RequestWithUser, res: Response, next: NextFunction): void => {
+  try {
+    const token = req.header("Authorization")?.split(" ")[1];
+    if (!token) {
+      res.status(400).json(ApiResponse.handleError(res, "Unauthorized access"));
+      return;
+    }
+
+    const secret_key: string = process.env.JWT_SECRET_KEY || "";
+
+    jwt.verify(token, secret_key, (err: any, decoded: any) => {
+      if (err) {
+        return res.status(403).json(ApiResponse.handleError(res, "Session expired, kindly login again"));
+      }
+
+      req.user = decoded;
+      return next();
+    });
+  } catch (error) {
+    res.status(403).json(ApiResponse.handleError(res, "Invalid token"));
+    return;
+  }
+};

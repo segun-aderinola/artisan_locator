@@ -11,6 +11,9 @@ export interface IServiceProvider extends IUser {
     identification_type?: string;     // E.g., passport, driver's license, etc.
     identification_doc_url?: string;  // File path or URL for identification document
     certificate_of_expertise_url?: string;     // E.g., passport, driver's license, etc.
+    latitude?: string;
+    longitude?: string;
+    location?: string;
 }
 
 export interface ServiceProviderCreationAttributes extends Optional<IServiceProvider, "id" | "created_at" | "updated_at" > {}

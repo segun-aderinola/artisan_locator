@@ -115,23 +115,43 @@
 // }
 
 
+// {
+//   "compilerOptions": {
+//     "target": "ES2022",
+//     "module": "commonjs",
+//     "baseUrl": "./",
+//     "outDir": "./dist",
+//     "rootDir": "./src",
+//     "noImplicitAny": true,
+//     "moduleResolution": "Node",
+//     "typeRoots": ["./node_modules/@types", "./src/types"], // ✅ Ensures express.d.ts is recognized
+//     "allowSyntheticDefaultImports": true,
+//     "esModuleInterop": true,
+//     "forceConsistentCasingInFileNames": true,
+//     "strict": true,
+//     "skipLibCheck": true,
+//     "experimentalDecorators": true,
+//     "emitDecoratorMetadata": true
+//   },
+//   "include": ["src/**/*", "src/types/**/*"]
+// }
+
 {
   "compilerOptions": {
-    "target": "ES2022",
-    "module": "commonjs" ,
-
-    "outDir": "./dist",
-    "rootDir": "./src",
-    "noImplicitAny": true,
-    "moduleResolution": "Node",
-    
-    "allowSyntheticDefaultImports": true ,
-    "esModuleInterop": true ,
-    "forceConsistentCasingInFileNames": true ,
-    "strict": true ,
-    "skipLibCheck": true ,
+    "target": "ES2020",
     "experimentalDecorators": true,
-    "emitDecoratorMetadata": true
+    "emitDecoratorMetadata": true,
+    "module": "NodeNext",
+    "rootDir": "./",
+    "moduleResolution": "NodeNext",
+    "outDir": "./dist",
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "strictPropertyInitialization": false,
+    "skipLibCheck": true,
+    "typeRoots": ["./node_modules/@types", "./src/types"]
   },
-  "include": ["src/**/*", "types/**/*"]
+  "include": ["src/**/*.ts", "types/**/*.ts", "express.d.ts"],
+  "exclude": ["node_modules"]
 }

@@ -1,10 +1,7 @@
-
-
-
 const appConfig = () => ({
     // NODE_ENV: getEnv("NODE_ENV", "development"),
     // APP_ORIGIN: getEnv("APP_ORIGIN", "localhost"),
-    // PORT: getEnv("PORT", "5000"),
+    PORT: Number(process.env.PORT) ?? 5000,
     // BASE_PATH: getEnv("BASE_PATH", "/api/v1"),
     // MONGO_URI: getEnv("MONGO_URI"),
     // JWT: {
@@ -15,6 +12,12 @@ const appConfig = () => ({
     // },
     // MAILER_SENDER: getEnv("MAILER_SENDER"),
     // RESEND_API_KEY: getEnv("RESEND_API_KEY"),
+    MAIL_SERVICE: process.env.MAIL_SERVICE,
+    MAIL_USERNAME: process.env.MAIL_USERNAME,
+    MAIL_PASSWORD: process.env.MAIL_PASSWORD,
+    FROM_EMAIL: process.env.FROM_EMAIL,
+    FROM_NAME: process.env.FROM_NAME,
+
     API_PREFIX: "/api/v1"
 });
 

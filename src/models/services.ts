@@ -1,0 +1,82 @@
+import sequelize from "../database";
+import { DataTypes, Model } from "sequelize";
+import { IService } from "../interfaces/services";
+export class ServiceModel extends Model<IService>
+    implements IService {
+    
+    public id!: number;
+    public uuid!: string;
+    public category_id!: string;
+    public provider_id!: string;
+    public name!: string;
+    public description!: string;
+    public images!: [];
+    public status!: string;
+    public created_at!: Date;
+    public updated_at!: Date;
+}
+ServiceModel.init(
+  {
+    id: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      autoIncrement: true,
+    },
+    uuid: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      allowNull: false,
+    },
+    provider_id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      allowNull: false,
+    },
+    category_id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      allowNull: false,
+    },
+    name: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      unique: true,
+    },
+    description: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    images: {
+      type: DataTypes.ARRAY(DataTypes.STRING),
+      allowNull: true,
+    },
+    status: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        defaultValue: 'active',
+        validate: {
+            isIn: [['active', 'inactive']]
+        }
+      },
+    created_at: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      defaultValue: DataTypes.NOW,
+    },
+    updated_at: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      defaultValue: DataTypes.NOW,
+    },
+  },
+  {
+    sequelize,
+    modelName: "ServiceModel",
+    timestamps: true,
+    tableName: 'services',
+    createdAt: 'created_at',
+    updatedAt: 'updated_at',
+  }
+);
+
+export default ServiceModel;

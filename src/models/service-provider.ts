@@ -33,15 +33,19 @@ const ServiceProviderModel = sequelize.define<ServiceProviderModel>(
       type: DataTypes.STRING,
       allowNull: true,
     },
-    business_name: {
-      type: DataTypes.STRING,
-      allowNull: true,
-    },
     gender: {
       type: DataTypes.STRING(10),
       allowNull: true,
     },
     location: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    latitude: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    longitude: {
       type: DataTypes.STRING,
       allowNull: true,
     },
@@ -61,6 +65,10 @@ const ServiceProviderModel = sequelize.define<ServiceProviderModel>(
     category_of_service: {
       type: DataTypes.STRING,
       allowNull: false, // This field is required to select the service category
+    },
+    business_name: {
+      type: DataTypes.STRING,
+      allowNull: true,
     },
     certificate: {
       type: DataTypes.STRING,
@@ -108,8 +116,8 @@ const ServiceProviderModel = sequelize.define<ServiceProviderModel>(
   {
     timestamps: true,
     tableName: 'service_providers',
-    createdAt: 'create_at',
-    updatedAt: 'update_at',
+    createdAt: 'created_at',
+    updatedAt: 'updated_at',
   }
 );
 

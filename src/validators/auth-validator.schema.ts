@@ -39,7 +39,7 @@ export const validate = (schema: yup.ObjectSchema<any>) => {
       // If validation fails, return an error response
       res.status(400).json({
         message: 'Validation failed',
-        errors: error.errors, // List of validation errors
+        errors: error, // List of validation errors
       });
     }
   };
