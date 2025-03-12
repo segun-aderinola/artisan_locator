@@ -44,7 +44,7 @@ export class RequestService {
               message: `A new request has been received from ${customer?.firstname} ${customer?.lastname} for your service ${service.name}. Kindly login to your account for more details`
             })
 
-            return request.dataValues;
+            return request.toJSON();
         } catch (error: any) {
           console.log(error)
             if (error instanceof AppError) throw error;
@@ -59,7 +59,7 @@ export class RequestService {
             },
         });
         if (!request) throw new AppError(StatusCodes.BAD_REQUEST, 'Request not found');
-        return request.dataValues;
+        return request.toJSON();
     }
 
     async acceptRequest(req: RequestWithUser) {
@@ -95,7 +95,7 @@ export class RequestService {
             subject: `Request ${request.uuid} Accepted 😁✅!`,
             message: `Your request for this service ${service.name} has been accepted by the provider. Kindly login to your account for more details`
           })
-          return request.dataValues;
+          return request.toJSON();
       } catch (error) {
           console.log(error)
           if (error instanceof AppError) throw error;
@@ -138,7 +138,7 @@ export class RequestService {
             subject: `Request ${request.uuid} Declined 😔❌!`,
             message: `Your request for this service ${service.name} has been declined by the provider. Kindly login to your account for more details`
           })
-          return request.dataValues;
+          return request.toJSON();
       } catch (error) {
           if (error instanceof AppError) throw error;
           throw new AppError(StatusCodes.SERVICE_UNAVAILABLE, 'Error occurred while declining the request');
@@ -159,17 +159,26 @@ export class RequestService {
             offset: offset,
             order: [['created_at', 'DESC']],
         });
-        const requestsWithRatings = await Promise.all(
-            rows.map(async (request) => {
-                const rating = await this.ratingService.fetchRequestRatings(request.uuid);
-                return {
-                    ...request.toJSON(),
-                    rating: rating ?? 0,
-                };
-            })
-        );
+        const requestsWithCustomers = await Promise.all(rows.map(async (request) => {
+          const rating = await this.ratingService.fetchRating(request.uuid);
+      
+          const customer = await CustomerModel.findOne({ 
+              where: { uuid: request.customer_id } 
+          });
+          return {
+              ...request.toJSON(),
+              rating: rating ?? '',
+              customer: {
+                name: customer ? `${customer.firstname} ${customer.lastname}` : "Unknown Customer",
+                image: customer?.facial_verification_url ?? "",
+                email: customer?.email,
+                location: customer?.location
+              }
+          };
+        }))
+
         return {
-            requests: requestsWithRatings,
+            requests: requestsWithCustomers,
             pagination: {
                 totalRecords: count,
                 totalPages: Math.ceil(count / pageSize),
@@ -193,8 +202,24 @@ export class RequestService {
             offset: offset,
             order: [['created_at', 'DESC']],
         });
+        const requestsWithCustomers = await Promise.all(rows.map(async (request) => {
+     
+          const customer = await CustomerModel.findOne({ 
+              where: { uuid: request.customer_id } 
+          });
+          return {
+              ...request.toJSON(),
+              customer: {
+                name: customer ? `${customer.firstname} ${customer.lastname}` : "Unknown Customer",
+                image: customer?.facial_verification_url ?? "",
+                email: customer?.email,
+                location: customer?.location
+              }
+          };
+        }))
+
         return {
-            requests: rows,
+            requests: requestsWithCustomers,
             pagination: {
                 totalRecords: count,
                 totalPages: Math.ceil(count / pageSize),
@@ -204,9 +229,179 @@ export class RequestService {
         };
     }
 
+    async fetchAllPendingRequestsByProvider(req: RequestWithUser) {
+      const page: number = Number(req.query.page) || 1;
+      const pageSize: number = Number(req.query.pageSize) || 10;
+      const offset = (page - 1) * pageSize;
+      const { count, rows } = await RequestModel.findAndCountAll({
+          where: {
+              provider_id: req?.user?.userId,
+              status: 'pending',
+          },
+          limit: pageSize,
+          offset: offset,
+          order: [['created_at', 'DESC']],
+      });
+      const requestsWithCustomers = await Promise.all(rows.map(async (request) => {
+    
+        const customer = await CustomerModel.findOne({ 
+            where: { uuid: request.customer_id } 
+        });
+        return {
+            ...request.toJSON(),
+            customer: {
+              name: customer ? `${customer.firstname} ${customer.lastname}` : "Unknown Customer",
+              image: customer?.facial_verification_url ?? "",
+              email: customer?.email,
+              location: customer?.location
+            }
+        };
+      }))
+
+      return {
+          requests: requestsWithCustomers,
+          pagination: {
+              totalRecords: count,
+              totalPages: Math.ceil(count / pageSize),
+              currentPage: page,
+              pageSize: pageSize,
+          },
+      };
+    }
+
     async countCompletedRequestsByProvider(provider_id: string) {
         try {
             const { count, rows } = await RequestModel.findAndCountAll({ where: { provider_id, status: 'completed' } });
+            return count;
+        } catch (error) {}
+    }
+
+    async fetchAllCompletedRequestsByCustomer(req: RequestWithUser) {
+        const page: number = Number(req.query.page) || 1;
+        const pageSize: number = Number(req.query.pageSize) || 10;
+
+        const offset = (page - 1) * pageSize;
+        const { count, rows } = await RequestModel.findAndCountAll({
+            where: {
+                customer_id: req?.user?.userId,
+                status: 'completed',
+            },
+            limit: pageSize,
+            offset: offset,
+            order: [['created_at', 'DESC']],
+        });
+        const requestsWithCustomers = await Promise.all(rows.map(async (request) => {
+          const rating = await this.ratingService.fetchRating(request.uuid);
+          const service_provider = await ServiceProviderModel.findOne({ 
+              where: { uuid: request.provider_id } 
+          });
+          return {
+              ...request.toJSON(),
+              rating: rating ?? '',
+              provider: {
+                name: service_provider ? `${service_provider.firstname} ${service_provider.lastname}` : "Unknown Provider",
+                image: service_provider?.business_logo ?? "",
+                email: service_provider?.email,
+                location: service_provider?.location
+              }
+          };
+        }))
+
+        return {
+            requests: requestsWithCustomers,
+            pagination: {
+                totalRecords: count,
+                totalPages: Math.ceil(count / pageSize),
+                currentPage: page,
+                pageSize: pageSize,
+            },
+        };
+    }
+
+    async fetchAllPendingRequestsByCustomer(req: RequestWithUser) {
+      const page: number = Number(req.query.page) || 1;
+      const pageSize: number = Number(req.query.pageSize) || 10;
+      console.log(req.user?.userId)
+      const offset = (page - 1) * pageSize;
+      const { count, rows } = await RequestModel.findAndCountAll({
+          where: {
+              customer_id: req?.user?.userId,
+              status: 'pending',
+          },
+          limit: pageSize,
+          offset: offset,
+          order: [['created_at', 'DESC']],
+      });
+      const requestsWithCustomers = await Promise.all(rows.map(async (request) => {
+        const service_provider = await ServiceProviderModel.findOne({ 
+            where: { uuid: request.provider_id } 
+        });
+        return {
+            ...request.toJSON(),
+            provider: {
+              name: service_provider ? `${service_provider.firstname} ${service_provider.lastname}` : "Unknown Provider",
+              image: service_provider?.business_logo ?? "",
+              email: service_provider?.email,
+              location: service_provider?.location
+            }
+        };
+      }))
+
+      return {
+          requests: requestsWithCustomers,
+          pagination: {
+              totalRecords: count,
+              totalPages: Math.ceil(count / pageSize),
+              currentPage: page,
+              pageSize: pageSize,
+          },
+      };
+    }
+
+    async fetchAllOngoingRequestsByCustomer(req: RequestWithUser) {
+        const page: number = Number(req.query.page) || 1;
+        const pageSize: number = Number(req.query.pageSize) || 10;
+
+        const offset = (page - 1) * pageSize;
+        const { count, rows } = await RequestModel.findAndCountAll({
+            where: {
+                customer_id: req?.user?.userId,
+                status: 'ongoing',
+            },
+            limit: pageSize,
+            offset: offset,
+            order: [['created_at', 'DESC']],
+        });
+
+        const requestsWithCustomers = await Promise.all(rows.map(async (request) => {
+          const service_provider = await ServiceProviderModel.findOne({ 
+              where: { uuid: request.provider_id } 
+          });
+          return {
+              ...request.toJSON(),
+              provider: {
+                name: service_provider ? `${service_provider.firstname} ${service_provider.lastname}` : "Unknown Provider",
+                image: service_provider?.business_logo ?? "",
+                email: service_provider?.email,
+                location: service_provider?.location
+              }
+          };
+        }))
+
+        return {
+            requests: requestsWithCustomers,
+            pagination: {
+                totalRecords: count,
+                totalPages: Math.ceil(count / pageSize),
+                currentPage: page,
+                pageSize: pageSize,
+            },
+        };
+    }
+
+    async countCompletedRequestsByCustomer(customer_id: string) {
+        try {
+            const { count, rows } = await RequestModel.findAndCountAll({ where: { customer_id, status: 'completed' } });
             return count;
         } catch (error) {}
     }

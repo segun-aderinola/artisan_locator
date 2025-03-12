@@ -18,12 +18,15 @@ import { Op, Transaction } from "sequelize";
 import sequelize from "../database";
 import { on } from "events";
 import { log } from "console";
+import { RequestWithUser } from "../types/requestWithUser";
+import { RatingService } from "../service/rating.service";
 
 @injectable()
 export class CustomerController {
 
   constructor(
     @inject(S3Service) private readonly s3Service: S3Service,
+    @inject(RatingService) private readonly ratingService: RatingService,
   ) {}
 
   public registerPhone = async (req: Request, res: Response): Promise<void> => {
@@ -591,8 +594,9 @@ export class CustomerController {
       // delete user.password;
       const safeUser: Partial<typeof user> = user;
       delete safeUser.password;
+      const rating = await this.ratingService.calculateRatingCustomer(user.uuid)
 
-      ApiResponse.handleSuccess(res, "Login successful", { token, user: safeUser }, StatusCodes.OK);
+      ApiResponse.handleSuccess(res, "Login successful", { token, user: safeUser, rating }, StatusCodes.OK);
     } catch (error) {
       console.error(error);
       ApiResponse.handleError(res, (error as Error).message, StatusCodes.INTERNAL_SERVER_ERROR);
@@ -686,24 +690,49 @@ export class CustomerController {
     }
   };
 
-  public getProfile = async (req: Request, res: Response): Promise<void> => {
+  public getProfile = async (req: RequestWithUser, res: Response): Promise<void> => {
     try {
-      const { userId } = req.body;
-
+      const userId = req.user?.userId;
       const user = await CustomerModel.findOne({ where: { uuid: userId } });
 
       if (!user) {
         return ApiResponse.handleError(res, "User not found", StatusCodes.NOT_FOUND);
       }
 
-      // delete user.password;
       const safeUser: Partial<typeof user> = user;
       delete safeUser.password;
+      const rating = await this.ratingService.calculateRatingCustomer(user.uuid)
 
-      ApiResponse.handleSuccess(res, "User profile retrieved", { user: safeUser }, StatusCodes.OK);
+      ApiResponse.handleSuccess(res, "User profile retrieved", { user: safeUser, rating }, StatusCodes.OK);
     } catch (error) {
       console.error(error);
       ApiResponse.handleError(res, (error as Error).message, StatusCodes.INTERNAL_SERVER_ERROR);
     }
+  };
+
+  public changePassword = async (req: RequestWithUser, res: Response): Promise<void> => {
+      try {
+          const { old_password, new_password } = req.body;
+          const userId = req.user?.userId
+          const customer = await CustomerModel.findOne({ where: { uuid: userId } });
+
+          if (!customer) {
+              return ApiResponse.handleError(res, 'User not found', 404);
+          }
+
+          const isPasswordValid = bcrypt.compareSync(old_password, customer.password);
+
+          if (!isPasswordValid) {
+              return ApiResponse.handleError(res, 'Old Password is incorrect', StatusCodes.BAD_REQUEST);
+          }
+          const hashedPassword = bcrypt.hashSync(new_password, 10);
+
+          await customer.update({ password: hashedPassword });
+
+          ApiResponse.handleSuccess(res, 'Password changed successfully', {}, 200);
+      } catch (error) {
+          console.error(error);
+          ApiResponse.handleError(res, (error as Error).message, 500);
+      }
   };
 }

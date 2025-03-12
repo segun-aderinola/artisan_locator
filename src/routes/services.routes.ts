@@ -12,10 +12,12 @@ const ratingController = container.resolve(RatingController);
 
 
 router.post("/", validate(servicesSchema), serviceController.createService);
+router.get("/search", serviceController.searchService);
 router.get("/:id", serviceController.fetchService);
 router.get("/", serviceController.fetchAllServices);
 router.get("/category/:category_id", serviceController.fetchAllServicesByCategory);
 router.get("/provider/:id", serviceController.fetchAllServicesByProvider);
 router.put("/:id", validate(servicesSchema), serviceController.updateService);
+// router.get("/search", serviceController.searchService);
 
 export default router;

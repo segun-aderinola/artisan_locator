@@ -17,7 +17,7 @@ import TransactionModel from '../models/transaction';
       try {
         await this.checkWalletExist(payload.user_id); 
         const wallet = await WalletModel.create({...payload});
-        return wallet.dataValues;
+        return wallet.toJSON();
       } catch (error: any) {
         if (error instanceof AppError) {
           throw error;

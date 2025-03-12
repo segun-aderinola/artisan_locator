@@ -1,6 +1,7 @@
 import sequelize from "../database";
 import { DataTypes, Model } from "sequelize";
 import { IService } from "../interfaces/services";
+import ServiceProviderModel from "./service-provider";
 export class ServiceModel extends Model<IService>
     implements IService {
     
@@ -10,6 +11,7 @@ export class ServiceModel extends Model<IService>
     public provider_id!: string;
     public name!: string;
     public description!: string;
+    public starting_price!: number;
     public images!: [];
     public status!: string;
     public created_at!: Date;
@@ -41,6 +43,11 @@ ServiceModel.init(
       type: DataTypes.STRING,
       allowNull: true,
       unique: true,
+    },
+    starting_price: {
+      type: DataTypes.DECIMAL(12, 5),
+      allowNull: true,
+      defaultValue: 0.00
     },
     description: {
       type: DataTypes.TEXT,
@@ -78,5 +85,10 @@ ServiceModel.init(
     updatedAt: 'updated_at',
   }
 );
+
+// ServiceModel.belongsTo(ServiceProviderModel, {
+//   foreignKey: "provider_id",
+//   as: "provider",
+// });
 
 export default ServiceModel;

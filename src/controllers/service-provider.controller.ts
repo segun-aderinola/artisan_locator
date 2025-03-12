@@ -698,7 +698,7 @@ export class ServiceProviderController {
             const safeServiceProvider: Partial<typeof serviceProvider> = serviceProvider.toJSON();
             delete safeServiceProvider.password;
 
-            const rating = await this.ratingService.calculateRatings(serviceProvider.uuid)
+            const rating = await this.ratingService.calculateRatingCustomer(serviceProvider.uuid)
             const wallet = await this.walletService.findWalletByUser(serviceProvider.uuid)
             const jobs_completed = await this.requestService.countCompletedRequestsByProvider(serviceProvider.uuid)
             ApiResponse.handleSuccess(res, 'Login successful', { token, user: safeServiceProvider, rating, wallet, jobs_completed }, StatusCodes.OK);
@@ -807,7 +807,7 @@ export class ServiceProviderController {
             const safeServiceProvider: Partial<typeof serviceProvider> = serviceProvider;
             delete safeServiceProvider.password;
             
-            const rating = await this.ratingService.calculateRatings(userId)
+            const rating = await this.ratingService.calculateRatingProvider(userId)
             const wallet = await this.walletService.findWalletByUser(userId)
             const jobs_completed = await this.requestService.countCompletedRequestsByProvider(userId)
             ApiResponse.handleSuccess(res, 'User found', { user: safeServiceProvider, rating, wallet, jobs_completed}, 200);

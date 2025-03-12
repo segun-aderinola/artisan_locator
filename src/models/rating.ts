@@ -9,8 +9,10 @@ class RatingModel extends Model<IRating, IRatingCreation> implements IRating {
   public customer_id!: string;
   public provider_id!: string;
   public request_id!: string;
-  public message!: string;
-  public rate!: number;
+  public provider_message!: string;
+  public customer_message!: string;
+  public customer_rating!: number;
+  public provider_rating!: number;
   public created_at!: Date;
   public updated_at!: Date;
 }
@@ -34,15 +36,23 @@ RatingModel.init(
         type: DataTypes.STRING,
         allowNull: false,
       },
-      message: {
+      customer_message: {
         type: DataTypes.STRING,
-        defaultValue: 0,
-        allowNull: false,
+        allowNull: true,
       },
-      rate: {
+      provider_message: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      customer_rating: {
         type: DataTypes.INTEGER,
         defaultValue: 0,
-        allowNull: false,
+        allowNull: true,
+      },
+      provider_rating: {
+        type: DataTypes.INTEGER,
+        defaultValue: 0,
+        allowNull: true,
       },
       created_at: {
         type: DataTypes.DATE,

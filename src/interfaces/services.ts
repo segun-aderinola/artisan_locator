@@ -1,6 +1,3 @@
-import { Model, Optional } from "sequelize";
-
-
 export interface IService {
     id: number;
     uuid: string;
@@ -8,6 +5,7 @@ export interface IService {
     category_id: string;
     images: [];
     name: string;
+    starting_price: number;
     description: string;
     status: string;
     created_at: Date;

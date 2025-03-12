@@ -13,7 +13,7 @@ export class CategoryService {
         const userData: IServiceCategory = req.body;
         await this.checkCategoryExist(userData.name);
         const category = await ServiceCategoryModel.create(userData);
-        return category.dataValues;
+        return category.toJSON();
     } catch (error: any) {
         if(error instanceof AppError){
           throw error;
@@ -26,7 +26,7 @@ export class CategoryService {
     try {
         const id = req.params.id;
         const category = await this.getCategoryById(id);
-        return category.dataValues;
+        return category.toJSON();
     } catch (error: any) {
       if(error instanceof AppError){
         throw error;
@@ -41,7 +41,7 @@ export class CategoryService {
         const updateData = req.body;
         const category = await this.getCategoryById(id);
         await category.update(updateData);
-        return category.dataValues;
+        return category.toJSON();
     } catch (error: any) {
       if(error instanceof AppError){
         throw error;

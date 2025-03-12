@@ -71,4 +71,14 @@ export class ServiceController {
         }
     }
 
+    public searchService = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const response = await this.servicesService.searchServices(req);
+            return ApiResponse.handleSuccess(res, 'Services searched successfully', response, StatusCodes.CREATED);
+        } catch (error) {
+            const statusCode = error instanceof Error ? StatusCodes.BAD_REQUEST : StatusCodes.INTERNAL_SERVER_ERROR;
+            return ApiResponse.handleError(res, (error as Error).message, statusCode);
+        }
+    }
+
 }

@@ -10,6 +10,9 @@ import { customerInfoSchema } from '../validators/customer-info.schema';
 import { verifyEmailSchema } from '../validators/verify-email.schema';
 import { createPasswordSchema } from '../validators/create-password.schema';
 import { facialCaptureSchema } from '../validators/facial-verification.schema';
+import { UserAuthentication } from '../middleware/auth.middleware';
+import { changePasswordSchema } from '../validators/change_password.validator.schema';
+import { validate } from '../validators/auth-validator.schema';
 
 const router = Router();
 
@@ -55,5 +58,8 @@ router.post('/upload-facial-capture',
 router.post('/reset-password', customerController.resetPassword);
 
 // router.post('/resend-code', customerController.resetPassword);
+router.get('/dashboard/profile', UserAuthentication, customerController.getProfile);
+
+router.post('/dashboard/change-password', [UserAuthentication, validate(changePasswordSchema)], customerController.changePassword);
 
 export default router;

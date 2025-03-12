@@ -62,9 +62,49 @@ export class RequestController {
         }
     }
 
+    public fetchPendingRequest = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const response = await this.requestService.fetchAllPendingRequestsByProvider(req);
+            return ApiResponse.handleSuccess(res, 'Request fetched successfully', response, StatusCodes.OK);
+        } catch (error) {
+            const statusCode = error instanceof Error ? StatusCodes.BAD_REQUEST : StatusCodes.INTERNAL_SERVER_ERROR;
+            return ApiResponse.handleError(res, (error as Error).message, statusCode);
+        }
+    }
+
     public fetchCompletedRequest = async (req: Request, res: Response): Promise<void> => {
         try {
             const response = await this.requestService.fetchAllCompletedRequestsByProvider(req);
+            return ApiResponse.handleSuccess(res, 'Request fetched successfully', response, StatusCodes.OK);
+        } catch (error) {
+            const statusCode = error instanceof Error ? StatusCodes.BAD_REQUEST : StatusCodes.INTERNAL_SERVER_ERROR;
+            return ApiResponse.handleError(res, (error as Error).message, statusCode);
+        }
+    }
+
+    public fetchOngoingRequestCustomer = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const response = await this.requestService.fetchAllOngoingRequestsByCustomer(req);
+            return ApiResponse.handleSuccess(res, 'Request fetched successfully', response, StatusCodes.OK);
+        } catch (error) {
+            const statusCode = error instanceof Error ? StatusCodes.BAD_REQUEST : StatusCodes.INTERNAL_SERVER_ERROR;
+            return ApiResponse.handleError(res, (error as Error).message, statusCode);
+        }
+    }
+
+    public fetchCompletedRequestCustomer = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const response = await this.requestService.fetchAllCompletedRequestsByCustomer(req);
+            return ApiResponse.handleSuccess(res, 'Request fetched successfully', response, StatusCodes.OK);
+        } catch (error) {
+            const statusCode = error instanceof Error ? StatusCodes.BAD_REQUEST : StatusCodes.INTERNAL_SERVER_ERROR;
+            return ApiResponse.handleError(res, (error as Error).message, statusCode);
+        }
+    }
+
+    public fetchPendingRequestCustomer = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const response = await this.requestService.fetchAllPendingRequestsByCustomer(req);
             return ApiResponse.handleSuccess(res, 'Request fetched successfully', response, StatusCodes.OK);
         } catch (error) {
             const statusCode = error instanceof Error ? StatusCodes.BAD_REQUEST : StatusCodes.INTERNAL_SERVER_ERROR;

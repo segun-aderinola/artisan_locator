@@ -20,6 +20,10 @@ module.exports = {
                 type: DataTypes.STRING,
                 allowNull: false,
             },
+            starting_price: {
+                type: DataTypes.DECIMAL(12,5),
+                allowNull: true,
+            },
             name: {
                 type: DataTypes.STRING,
                 allowNull: false,
