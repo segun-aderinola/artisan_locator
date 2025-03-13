@@ -6,15 +6,15 @@ import AppError from '../utils/error-log.utils';
 import { StatusCodes } from 'http-status-codes';
 import ServiceProviderModel from '../models/service-provider';
 import sequelize from '../database';
-import { Op } from 'sequelize';
+import { Op, WhereOptions } from "sequelize";
 
 // Function to calculate distance between two coordinates using the Haversine formula
 const haversineDistanceQuery = (customerLat: number, customerLng: number) => {
   return sequelize.literal(`
     (6371 * acos(
-      cos(radians(${customerLat})) * cos(radians(ServiceProviderModel.latitude))
-      * cos(radians(ServiceProviderModel.longitude) - radians(${customerLng}))
-      + sin(radians(${customerLat})) * sin(radians(ServiceProviderModel.latitude))
+      cos(radians(${customerLat})) * cos(radians("provider"."latitude"::FLOAT))
+      * cos(radians("provider"."longitude"::FLOAT) - radians(${customerLng}))
+      + sin(radians(${customerLat})) * sin(radians("provider"."latitude"::FLOAT))
     )) 
   `);
 };
@@ -199,67 +199,91 @@ export class ServicesService {
       if(error instanceof AppError) throw error;
       throw new AppError(StatusCodes.INTERNAL_SERVER_ERROR, 'Error creating service');
     }
-  }
-
+  }  
   async searchServices(req: Request) {
     try {
-      const { query, category, lat, lng, page = 1, pageSize = 10 } = req.query;
-
-      if (!lat || !lng) {
-        throw new AppError(StatusCodes.BAD_REQUEST, 'Latitude and longitude are required')
-      }
-
+      const { query, category, lat, lng, page = 1, pageSize = 10, starting_price } = req.query;
+  
+      // if (!lat || !lng) {
+      //   throw new AppError(StatusCodes.BAD_REQUEST, "Latitude and longitude are required");
+      // }
+  
       const customerLat = parseFloat(lat as string);
       const customerLng = parseFloat(lng as string);
       const offset = (Number(page) - 1) * Number(pageSize);
-
+  
       // Define search filters
-      const searchFilters: any = {
-        status: "active",
-      };
-
+      const searchFilters: WhereOptions<any> = { status: "active" };
+  
       if (query) {
-        searchFilters[Op.or] = [
-          { name: { [Op.iLike]: `%${query}%` } }, // Case-insensitive search for service name
-          { "$provider.category_of_service$": { [Op.iLike]: `%${query}%` } }, // Search in service provider's category
+        searchFilters[Op.or as keyof WhereOptions] = [
+          { name: { [Op.iLike]: `%${query}%` } },
+          { "$provider.category_of_service$": { [Op.iLike]: `%${query}%` } },
         ];
       }
-
+  
       if (category) {
         searchFilters.category_id = category;
       }
+  
+      if (starting_price) {
+        searchFilters.starting_price = { [Op.gte]: parseFloat(starting_price as string) };
+      }
 
-      // Fetch services with providers within 100 meters
+      let distanceFilter: any = null;
+      console.log(lat, lng)
+      if (lat && lng) {
+        const customerLat = parseFloat(lat as string);
+        const customerLng = parseFloat(lng as string);
+
+        if (!isNaN(customerLat) && !isNaN(customerLng)) {
+          distanceFilter = sequelize.where(
+            sequelize.literal(`
+              (6371 * acos(
+                cos(radians(${customerLat})) * cos(radians("provider"."latitude"::FLOAT))
+                * cos(radians("provider"."longitude"::FLOAT) - radians(${customerLng}))
+                + sin(radians(${customerLat})) * sin(radians("provider"."latitude"::FLOAT))
+              ))
+            `),
+            { [Op.lte]: 1.0 } // Only filter by distance if lat/lng are present
+          );
+        }
+      }
+
+      const includeClause: any = {
+        model: ServiceProviderModel,
+        as: "provider",
+        attributes: ["firstname", "lastname", "business_logo", "latitude", "longitude"],
+      };
+  
+      if (distanceFilter) {
+        includeClause.where = distanceFilter;
+      }
+
+
       const { count, rows } = await ServiceModel.findAndCountAll({
         where: searchFilters,
-        include: [
-          {
-            model: ServiceProviderModel,
-            as: "provider",
-            attributes: ["firstname", "lastname", "business_logo", "latitude", "longitude"],
-            where: sequelize.where(haversineDistanceQuery(customerLat, customerLng), {
-              [Op.lte]: 0.1, // 0.1 km (100 meters)
-            }),
-          },
-        ],
+        include: [includeClause],
         limit: Number(pageSize),
-        offset: offset,
+        offset,
         order: [["created_at", "DESC"]],
       });
-
+  
       // Format response with provider details
       const servicesWithProviders = await Promise.all(
-       rows.map(async(service) => {
-        const provider = await ServiceProviderModel.findOne({ where: { uuid: service.provider_id } })
-
-        return {
-        ...service.toJSON(),
-        provider: {
-          name: provider ? `${provider.firstname} ${provider.lastname}` : "Unknown Provider",
-          image: provider?.business_logo ?? "",
-        },
-    }}));
-
+        rows.map(async (service) => {
+          const provider = await ServiceProviderModel.findOne({ where: { uuid: service.provider_id } })  
+          return {
+          ...service.toJSON(),
+            provider: {
+              name: provider ? `${provider.firstname} ${provider.lastname}` : "Unknown Provider",
+              image: provider?.business_logo ?? "",
+            },
+        }}));
+      
+      
+      
+      
       return {
         services: servicesWithProviders,
         pagination: {
@@ -269,12 +293,11 @@ export class ServicesService {
           pageSize: Number(pageSize),
         },
       };
-
     } catch (error) {
       console.error("Error in searchServices:", error);
-      if(error instanceof AppError) return error;
-        throw new AppError(StatusCodes.SERVICE_UNAVAILABLE, "An error occurred while searching for services.")
+      throw new AppError(StatusCodes.SERVICE_UNAVAILABLE, "An error occurred while searching for services.");
     }
   }
+  
 
 }

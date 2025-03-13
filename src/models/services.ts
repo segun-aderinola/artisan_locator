@@ -1,22 +1,22 @@
-import sequelize from "../database";
 import { DataTypes, Model } from "sequelize";
+import sequelize from "../database";
 import { IService } from "../interfaces/services";
 import ServiceProviderModel from "./service-provider";
-export class ServiceModel extends Model<IService>
-    implements IService {
-    
-    public id!: number;
-    public uuid!: string;
-    public category_id!: string;
-    public provider_id!: string;
-    public name!: string;
-    public description!: string;
-    public starting_price!: number;
-    public images!: [];
-    public status!: string;
-    public created_at!: Date;
-    public updated_at!: Date;
+
+export class ServiceModel extends Model<IService> implements IService {
+  public id!: number;
+  public uuid!: string;
+  public category_id!: string;
+  public provider_id!: string;
+  public name!: string;
+  public description!: string;
+  public starting_price!: number;
+  public images!: [];
+  public status!: string;
+  public created_at!: Date;
+  public updated_at!: Date;
 }
+
 ServiceModel.init(
   {
     id: {
@@ -31,12 +31,10 @@ ServiceModel.init(
     },
     provider_id: {
       type: DataTypes.UUID,
-      defaultValue: DataTypes.UUIDV4,
       allowNull: false,
     },
     category_id: {
       type: DataTypes.UUID,
-      defaultValue: DataTypes.UUIDV4,
       allowNull: false,
     },
     name: {
@@ -47,7 +45,7 @@ ServiceModel.init(
     starting_price: {
       type: DataTypes.DECIMAL(12, 5),
       allowNull: true,
-      defaultValue: 0.00
+      defaultValue: 0.0,
     },
     description: {
       type: DataTypes.TEXT,
@@ -58,13 +56,13 @@ ServiceModel.init(
       allowNull: true,
     },
     status: {
-        type: DataTypes.STRING,
-        allowNull: true,
-        defaultValue: 'active',
-        validate: {
-            isIn: [['active', 'inactive']]
-        }
+      type: DataTypes.STRING,
+      allowNull: true,
+      defaultValue: "active",
+      validate: {
+        isIn: [["active", "inactive"]],
       },
+    },
     created_at: {
       type: DataTypes.DATE,
       allowNull: false,
@@ -80,15 +78,11 @@ ServiceModel.init(
     sequelize,
     modelName: "ServiceModel",
     timestamps: true,
-    tableName: 'services',
-    createdAt: 'created_at',
-    updatedAt: 'updated_at',
+    tableName: "services",
+    createdAt: "created_at",
+    updatedAt: "updated_at",
   }
 );
 
-// ServiceModel.belongsTo(ServiceProviderModel, {
-//   foreignKey: "provider_id",
-//   as: "provider",
-// });
 
 export default ServiceModel;

@@ -139,11 +139,11 @@ class MailService {
   async passwordResetNotification(options: any): Promise<void> {
     const data = {
       name: options.name,
-      email: options.otp,
-      subject: options.subject,
+      otp: options.otp,
+      //subject: options.subject,
     };
     try {
-      await this.sendMail(data, options, "password_reset_notification");
+      await this.sendMail(data, options, "password_reset");
     } catch (error: any) {
       console.error({ error: error.message }, "Error sending mail");
     }
@@ -225,9 +225,10 @@ class MailService {
       email: options.email,
       otp: options.otp,
       subject: options.subject,
+      message: options.message
     };
     try {
-      await this.sendMail(data, options, "otp");
+      await this.sendMail(data, options, "otp_mail");
     } catch (error: any) {
       console.error({ error: error.message }, "Error sending mail");
     }

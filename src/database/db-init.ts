@@ -9,6 +9,7 @@ import TemporaryUserModel from '../models/temporary-user';
 import TokenModel from '../models/token';
 import TransactionModel from '../models/transaction';
 import WalletModel from '../models/wallet';
+import sequelize from './index';
 import Db from './index';
 
 // Database connection
@@ -25,11 +26,11 @@ try {
     ServiceCategoryModel.sync({ alter: false });
     ServiceModel.sync({ alter: false });
     RequestModel.sync({ alter: false });
-    RatingModel.sync({ alter: true });
-    WalletModel.sync({ alter: true });
-    TransactionModel.sync({ alter: true });
+    RatingModel.sync({ alter: false });
+    WalletModel.sync({ alter: false });
+    TransactionModel.sync({ alter: false });
 
-    // await sequelize.sync({ force: true });
+    //await sequelize.sync({ alter: true });
 } catch (error) {
     console.error('Unable to connect to the database:', error);
     process.exit(1); // Exit the application if the DB connection fails

@@ -7,7 +7,7 @@ import * as dotenv from "dotenv";
 dotenv.config();
 
 import DbInstance from "./database/db-init";
-
+import './models/index';
 // import { API_PREFIX } from "./config";
 // import { initializeDatabase } from "./database/db-init";
 import rootRouter from "./routes";

@@ -1,12 +1,40 @@
+import { DataTypes, Model } from "sequelize";
 import sequelize from "../database";
-import { ServiceProviderModel } from "../interfaces/service-provider";
-import { DataTypes } from "sequelize";
+import { IServiceProvider } from "../interfaces/service-provider";
+import ServiceModel from "./services";
 
-const ServiceProviderModel = sequelize.define<ServiceProviderModel>(
-  'ServiceProviderModel',
+export class ServiceProviderModel extends Model<IServiceProvider> implements IServiceProvider {
+  public id!: number;
+  public uuid!: string;
+  public phone!: string;
+  public email!: string;
+  public firstname!: string;
+  public lastname!: string;
+  public gender!: string;
+  public location!: string;
+  public latitude!: string;
+  public longitude!: string;
+  public password!: string;
+  public email_verified_at!: Date;
+  public phone_verified_at!: Date;
+  public category_of_service!: string;
+  public business_name!: string;
+  public certificate!: string;
+  public business_logo!: string;
+  public brief_introduction!: string;
+  public bio!: string;
+  public identification_type!: string;
+  public identification_doc_url!: string;
+  public certificate_of_expertise_url!: string;
+  public flagged!: boolean;
+  public created_at!: Date;
+  public updated_at!: Date;
+}
+
+ServiceProviderModel.init(
   {
     id: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.BIGINT,
       primaryKey: true,
       autoIncrement: true,
     },
@@ -14,11 +42,12 @@ const ServiceProviderModel = sequelize.define<ServiceProviderModel>(
       type: DataTypes.UUID,
       defaultValue: DataTypes.UUIDV4,
       allowNull: false,
+      // primaryKey: true,
+      unique: true,
     },
     phone: {
       type: DataTypes.STRING(15),
       allowNull: true,
-      // unique: true, // Optional, can be enforced if needed
     },
     email: {
       type: DataTypes.STRING,
@@ -61,10 +90,9 @@ const ServiceProviderModel = sequelize.define<ServiceProviderModel>(
       type: DataTypes.DATE,
       allowNull: true,
     },
-    // New fields specific to service provider
     category_of_service: {
       type: DataTypes.STRING,
-      allowNull: false, // This field is required to select the service category
+      allowNull: false,
     },
     business_name: {
       type: DataTypes.STRING,
@@ -72,31 +100,31 @@ const ServiceProviderModel = sequelize.define<ServiceProviderModel>(
     },
     certificate: {
       type: DataTypes.STRING,
-      allowNull: true, // This would be a file path to the certificate
+      allowNull: true,
     },
     business_logo: {
       type: DataTypes.STRING,
-      allowNull: true, // This would be a file path to the business logo
+      allowNull: true,
     },
     brief_introduction: {
       type: DataTypes.STRING,
-      allowNull: true, // This would be a file path to the business logo
+      allowNull: true,
     },
     bio: {
       type: DataTypes.TEXT,
-      allowNull: true, // This would be a file path to the business logo
+      allowNull: true,
     },
     identification_type: {
       type: DataTypes.STRING,
-      allowNull: true, // Type of ID (e.g., Passport, Driver's License, etc.)
+      allowNull: true,
     },
     identification_doc_url: {
       type: DataTypes.STRING,
-      allowNull: true, // File path to the ID document
+      allowNull: true,
     },
     certificate_of_expertise_url: {
       type: DataTypes.STRING,
-      allowNull: true, // Type of ID (e.g., Passport, Driver's License, etc.)
+      allowNull: true,
     },
     flagged: {
       type: DataTypes.BOOLEAN,
@@ -114,10 +142,12 @@ const ServiceProviderModel = sequelize.define<ServiceProviderModel>(
     },
   },
   {
+    sequelize,
+    modelName: "ServiceProviderModel",
     timestamps: true,
-    tableName: 'service_providers',
-    createdAt: 'created_at',
-    updatedAt: 'updated_at',
+    tableName: "service_providers",
+    createdAt: "created_at",
+    updatedAt: "updated_at",
   }
 );
 

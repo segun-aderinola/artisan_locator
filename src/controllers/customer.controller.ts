@@ -20,6 +20,7 @@ import { on } from "events";
 import { log } from "console";
 import { RequestWithUser } from "../types/requestWithUser";
 import { RatingService } from "../service/rating.service";
+import MailService from "../service/email.service";
 
 @injectable()
 export class CustomerController {
@@ -27,6 +28,7 @@ export class CustomerController {
   constructor(
     @inject(S3Service) private readonly s3Service: S3Service,
     @inject(RatingService) private readonly ratingService: RatingService,
+    @inject(MailService) private readonly mailService: MailService,
   ) {}
 
   public registerPhone = async (req: Request, res: Response): Promise<void> => {
@@ -81,6 +83,14 @@ export class CustomerController {
       const safeUser: Partial<typeof tempUser> = tempUser;
       delete safeUser.password;
 
+      const mail = {
+        name: safeUser.first_name,
+        message: "Kindly use the code to verify your account",
+        otp: token.code,
+        email: safeUser.email,
+        subject: "OTP Verification",
+      }
+      await this.mailService.sendOTPMail(mail);
       ApiResponse.handleSuccess(res, "Verification code sent successfully", { user: safeUser, token: token.code }, StatusCodes.OK);
     } catch (error) {
       console.error(error);
@@ -153,65 +163,18 @@ export class CustomerController {
     }
   };
 
-  // public verifyPhone = async (req: Request, res: Response): Promise<void> => {
-  //   const t: Transaction = await sequelize.transaction();
-  //   try {
-  //     const { user_id, phone, code } = req.body;
-
-  //     const existingCustomer = await CustomerModel.findOne({ where: { uuid: user_id } });
-  //     if (existingCustomer) {
-  //       return ApiResponse.handleError(res, "You are already registered.", StatusCodes.BAD_REQUEST);
-  //     }
-
-  //     const formattedPhoneNumber = Utility.formatPhoneNumber(phone);
-
-  //     const tempUser = await TemporaryUserModel.findOne({
-  //       where: { uuid: user_id, phone_number: formattedPhoneNumber },
-  //       transaction: t, // Pass transaction object to ensure it uses the transaction
-  //     });
-
-  //     if (!tempUser) {
-  //       return ApiResponse.handleError(res, "User not found.", StatusCodes.NOT_FOUND);
-  //     }
-
-  //     const token = await TokenModel.findOne({
-  //       where: {
-  //         code,
-  //         key: formattedPhoneNumber,
-  //         type: TokenType.PHONE_VERIFICATION,
-  //         status: TokenStatus.NOT_USED,
-  //       },
-  //       transaction: t,
-  //     });
-
-  //     if (!token) {
-  //       return ApiResponse.handleError(res, "Invalid or expired verification code.", StatusCodes.BAD_REQUEST);
-  //     }
-
-  //     if (moment(token.expired_at).isBefore(moment())) {
-  //       await token.update({ status: TokenStatus.EXPIRED }, { transaction: t });
-  //       return ApiResponse.handleError(res, "Verification code has expired.", StatusCodes.BAD_REQUEST);
-  //     }
-
-  //     await token.update({ status: TokenStatus.USED }, { transaction: t });
-  //     tempUser.onboarding_step = CustomerOnboardingStep.VERIFY_PHONE;
-  //     tempUser.phone_verified_at = moment().toDate();
-  //     tempUser.save({ transaction: t });
-
-  //     await t.commit();
-  //     ApiResponse.handleSuccess(res, "Phone number successfully verified!", {}, StatusCodes.OK);
-  //   } catch (error) {
-  //     await t.rollback();
-  //     console.error(error);
-  //     ApiResponse.handleError(res, (error as Error).message, StatusCodes.INTERNAL_SERVER_ERROR);
-  //   }
-  // };
-
   public resendToken = async (req: Request, res: Response): Promise<void> => {
     try {
       const { user_id, phone, email, type } = req.body;
       let key = "";
-      let existingCustomer = null;
+      let existingCustomer: any = null;
+      let data: {
+        name: string,
+        email: string,
+      } = {
+        name: "",
+        email: "",
+      }
 
       if (type === TokenType.EMAIL_VERIFICATION) {
         // Handle email verification logic
@@ -234,6 +197,8 @@ export class CustomerController {
             status: TokenStatus.NOT_USED,
           }}
         );
+        data.name = existingCustomer ? existingCustomer.first_name || existingCustomer.firstname : "",
+        data.email = existingCustomer.email;
       } else if (type === TokenType.PHONE_VERIFICATION) {
         // Handle phone verification logic
         const formattedPhoneNumber = Utility.formatPhoneNumber(phone);
@@ -256,6 +221,9 @@ export class CustomerController {
             status: TokenStatus.NOT_USED,
           }}
         );
+
+        data.name = existingCustomer ? existingCustomer.first_name || existingCustomer.firstname : "",
+        data.email = existingCustomer.email;
       }
 
       const verificationCode = Utility.generateNumericCode(4);
@@ -270,7 +238,15 @@ export class CustomerController {
         expired_at: moment().add(5, "minutes").toDate(),
       });
 
-      ApiResponse.handleSuccess(res, "Verification code sent successfully", { token }, StatusCodes.OK);
+      const mail = {
+        ...data,
+        message: "Kindly use the code to verify your account",
+        otp: token.code,
+        subject: "OTP Verification",
+      }
+      await this.mailService.sendOTPMail(mail);
+
+      ApiResponse.handleSuccess(res, "Verification code sent successfully", StatusCodes.OK);
     } catch (error) {
       console.error(error);
       ApiResponse.handleError(res, (error as Error).message, StatusCodes.INTERNAL_SERVER_ERROR);
@@ -361,12 +337,18 @@ export class CustomerController {
   
       // Commit the transaction
       await transaction.commit();
-  
+      const mail = {
+        name: tempUser.first_name,
+        email: tempUser.email,
+        message: "Kindly use the code to verify your account",
+        otp: token.code,
+        subject: "OTP Verification",
+      }
+      await this.mailService.sendOTPMail(mail);
       // Send a success response
       ApiResponse.handleSuccess(
         res,
         "Customer information updated successfully. Verification code sent to email.",
-        { token },
         StatusCodes.OK
       );
     } catch (error) {
@@ -640,6 +622,14 @@ export class CustomerController {
         status: TokenStatus.NOT_USED,
         expired_at: tokenExpiry,
       });
+
+      const mail = {
+        name: customer.firstname,
+        email: customer.email,
+        otp: resetToken,
+        subject: "PASSWORD RESET",
+      }
+      await this.mailService.passwordResetNotification(mail);
 
       ApiResponse.handleSuccess(res, "Password reset link sent", {}, StatusCodes.OK);
     } catch (error) {

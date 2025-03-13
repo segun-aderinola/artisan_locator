@@ -17,6 +17,7 @@ const appConfig = () => ({
     MAIL_PASSWORD: process.env.MAIL_PASSWORD,
     FROM_EMAIL: process.env.FROM_EMAIL,
     FROM_NAME: process.env.FROM_NAME,
+    // FRONTEND_BASEURL: process.env.FRONTEND_BASEURL,
 
     API_PREFIX: "/api/v1"
 });

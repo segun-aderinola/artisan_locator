@@ -40,7 +40,7 @@ const AdminModel = sequelize.define<AdminModel>(
   },
   {
     timestamps: true,
-    tableName: 'customers',
+    tableName: 'admins',
     createdAt: 'created_at',
     updatedAt: 'updated_at',
   }

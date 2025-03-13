@@ -19,6 +19,7 @@ import { RequestWithUser } from '../types/requestWithUser';
 import { RatingService } from '../service/rating.service';
 import { WalletService } from '../service/wallet.service';
 import { RequestService } from '../service/requests.service';
+import MailService from '../service/email.service';
 
 @injectable()
 export class ServiceProviderController {
@@ -27,6 +28,7 @@ export class ServiceProviderController {
         @inject(RatingService) private readonly ratingService: RatingService,
         @inject(WalletService) private readonly walletService: WalletService,
         @inject(RequestService) private readonly requestService: RequestService,
+        @inject(MailService) private readonly mailService: MailService
     ) {}
 
     public registerPhone = async (req: Request, res: Response): Promise<void> => {
@@ -82,7 +84,14 @@ export class ServiceProviderController {
             // delete user.password;
             const safeUser: Partial<typeof tempUser> = tempUser;
             delete safeUser.password;
-
+            const mail = {
+                name: tempUser.first_name,
+                email: tempUser.email,
+                message: 'Kindly use the code to verify your account',
+                otp: token.code,
+                subject: 'OTP Verification',
+            };
+            await this.mailService.sendOTPMail(mail);
             return ApiResponse.handleSuccess(
                 res,
                 'Verification code sent successfully',
@@ -164,8 +173,15 @@ export class ServiceProviderController {
         const t: Transaction = await sequelize.transaction();
         try {
             const { user_id, phone, email, type } = req.body;
+            let data: {
+                name: string,
+                email: string,
+              } = {
+                name: "",
+                email: "",
+              }
             let key = '';
-            let existingServiceProvider = null;
+            let existingServiceProvider: any = null;
 
             if (type === TokenType.EMAIL_VERIFICATION) {
                 // Handle email verification logic
@@ -191,6 +207,8 @@ export class ServiceProviderController {
                         transaction: t,
                     }
                 );
+                data.name = existingServiceProvider ? existingServiceProvider.first_name || existingServiceProvider.firstname : "",
+                data.email = existingServiceProvider.email;
             } else if (type === TokenType.PHONE_VERIFICATION) {
                 // Handle phone verification logic
                 const formattedPhoneNumber = Utility.formatPhoneNumber(phone);
@@ -220,6 +238,9 @@ export class ServiceProviderController {
                         transaction: t,
                     }
                 );
+
+                data.name = existingServiceProvider ? existingServiceProvider.first_name || existingServiceProvider.firstname : "",
+                data.email = existingServiceProvider.email;
             }
 
             const verificationCode = Utility.generateNumericCode(4);
@@ -238,7 +259,14 @@ export class ServiceProviderController {
             );
 
             await t.commit();
-            return ApiResponse.handleSuccess(res, 'Verification code sent successfully', { token }, StatusCodes.OK);
+            const mail = {
+                ...data,
+                message: 'Kindly use the code to verify your account',
+                otp: token.code,
+                subject: 'OTP Verification',
+            };
+            await this.mailService.sendOTPMail(mail);
+            return ApiResponse.handleSuccess(res, 'Verification code sent successfully', StatusCodes.OK);
         } catch (error) {
             await t.rollback();
             console.error(error);
@@ -323,12 +351,18 @@ export class ServiceProviderController {
 
             // Commit the transaction
             await transaction.commit();
-
+            const mail = {
+                name: updatedServiceProvider.first_name,
+                message: 'Kindly use the code to verify your account',
+                otp: token.code,
+                email: updatedServiceProvider.email,
+                subject: 'OTP Verification',
+            };
+            await this.mailService.sendOTPMail(mail);
             // Send a success response
             ApiResponse.handleSuccess(
                 res,
                 'Service provider information updated successfully. Verification code sent to email.',
-                { token },
                 StatusCodes.OK
             );
         } catch (error) {
@@ -698,10 +732,15 @@ export class ServiceProviderController {
             const safeServiceProvider: Partial<typeof serviceProvider> = serviceProvider.toJSON();
             delete safeServiceProvider.password;
 
-            const rating = await this.ratingService.calculateRatingCustomer(serviceProvider.uuid)
-            const wallet = await this.walletService.findWalletByUser(serviceProvider.uuid)
-            const jobs_completed = await this.requestService.countCompletedRequestsByProvider(serviceProvider.uuid)
-            ApiResponse.handleSuccess(res, 'Login successful', { token, user: safeServiceProvider, rating, wallet, jobs_completed }, StatusCodes.OK);
+            const rating = await this.ratingService.calculateRatingCustomer(serviceProvider.uuid);
+            const wallet = await this.walletService.findWalletByUser(serviceProvider.uuid);
+            const jobs_completed = await this.requestService.countCompletedRequestsByProvider(serviceProvider.uuid);
+            ApiResponse.handleSuccess(
+                res,
+                'Login successful',
+                { token, user: safeServiceProvider, rating, wallet, jobs_completed },
+                StatusCodes.OK
+            );
         } catch (error) {
             console.error('Error during login:', error);
             ApiResponse.handleError(res, 'An error occurred during login.', StatusCodes.INTERNAL_SERVER_ERROR);
@@ -749,7 +788,12 @@ export class ServiceProviderController {
             const resetLink = `https://your-app.com/reset-password?token=${resetToken}`;
             const emailSubject = 'Password Reset Request';
             const emailMessage = `To reset your password, click the link below:\n\n${resetLink}`;
-
+            const mail = {
+                name: customer.firstname,
+                email: customer.email,
+                otp: resetToken,
+            };
+            await this.mailService.passwordResetNotification(mail);
             ApiResponse.handleSuccess(res, 'Password reset link sent', {}, 200);
         } catch (error) {
             console.error(error);
@@ -796,7 +840,7 @@ export class ServiceProviderController {
     public getProfile = async (req: RequestWithUser, res: Response): Promise<void> => {
         try {
             const userId = req.user?.userId;
-            if(!userId){
+            if (!userId) {
                 return ApiResponse.handleError(res, 'User not authorized', StatusCodes.UNAUTHORIZED);
             }
             const serviceProvider = await ServiceProviderModel.findOne({ where: { uuid: userId } });
@@ -806,11 +850,16 @@ export class ServiceProviderController {
             }
             const safeServiceProvider: Partial<typeof serviceProvider> = serviceProvider;
             delete safeServiceProvider.password;
-            
-            const rating = await this.ratingService.calculateRatingProvider(userId)
-            const wallet = await this.walletService.findWalletByUser(userId)
-            const jobs_completed = await this.requestService.countCompletedRequestsByProvider(userId)
-            ApiResponse.handleSuccess(res, 'User found', { user: safeServiceProvider, rating, wallet, jobs_completed}, 200);
+
+            const rating = await this.ratingService.calculateRatingProvider(userId);
+            const wallet = await this.walletService.findWalletByUser(userId);
+            const jobs_completed = await this.requestService.countCompletedRequestsByProvider(userId);
+            ApiResponse.handleSuccess(
+                res,
+                'User found',
+                { user: safeServiceProvider, rating, wallet, jobs_completed },
+                200
+            );
         } catch (error) {
             console.error(error);
             ApiResponse.handleError(res, (error as Error).message, 500);
@@ -820,7 +869,7 @@ export class ServiceProviderController {
     public changePassword = async (req: RequestWithUser, res: Response): Promise<void> => {
         try {
             const { old_password, new_password } = req.body;
-            const userId = req.user?.userId
+            const userId = req.user?.userId;
             const service_provider = await ServiceProviderModel.findOne({ where: { uuid: userId } });
 
             if (!service_provider) {
