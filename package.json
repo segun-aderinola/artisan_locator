@@ -4,7 +4,7 @@
   "main": "index.js",
   "scripts": {
     "prestart": "npm run build",
-    "start": "node dist/server.js",
+    "start": "node dist/src/server.js",
     "dev": "nodemon --watch \"src/**\" --ext \"ts,json\" --exec \"ts-node src/server.ts\"",
     "build": "rm -rf build && tsc",
     "lint:no-fix": "eslint src/**/*.ts",
